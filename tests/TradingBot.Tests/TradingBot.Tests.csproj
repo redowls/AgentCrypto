@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- SqlClient 5.x requires ICU; integration tests open real connections. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="FluentAssertions" Version="6.12.2" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+
+    <!-- Integration testing against a real SQL Server container -->
+    <PackageReference Include="Testcontainers.MsSql" Version="3.10.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TradingBot.Core\TradingBot.Core.csproj" />
+    <ProjectReference Include="..\..\src\TradingBot.Data\TradingBot.Data.csproj" />
+    <ProjectReference Include="..\..\src\TradingBot.Exchange\TradingBot.Exchange.csproj" />
+    <ProjectReference Include="..\..\src\TradingBot.MarketData\TradingBot.MarketData.csproj" />
+    <ProjectReference Include="..\..\src\TradingBot.Strategies\TradingBot.Strategies.csproj" />
+    <ProjectReference Include="..\..\src\TradingBot.Worker\TradingBot.Worker.csproj" />
+  </ItemGroup>
+
+</Project>

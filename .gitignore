@@ -1,0 +1,40 @@
+# Build
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+
+# Rider / Visual Studio
+.idea/
+*.DotSettings.user
+
+# VS Code
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Logs
+logs/
+*.log
+
+# Secrets — NEVER commit
+secrets.json
+appsettings.*.local.json
+.env
+.env.*
+!.env.example
+
+# Test results
+TestResults/
+coverage*/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml

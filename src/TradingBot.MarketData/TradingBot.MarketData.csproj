@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
+
+    <!-- Indicator pre-cache: ATR/EMA/ADX/RSI/BBands/Donchian/VWAP. -->
+    <PackageReference Include="Skender.Stock.Indicators" Version="2.6.1" />
+
+    <!-- Quartz hosts the gap-detection job; the in-memory job store keeps the
+         schedule lifecycle bound to the process and avoids a second dependency
+         on SQL Server for scheduler tables. -->
+    <PackageReference Include="Quartz" Version="3.13.1" />
+    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
+
+    <!-- Redis caches in-progress (live) candles + latest indicator snapshot.
+         Optional at runtime; an in-memory fallback keeps the worker bootable
+         without Redis (useful for unit tests + offline dev). -->
+    <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
+
+    <!-- System.Threading.Channels ships with the BCL on net8 — no package needed. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TradingBot.Core\TradingBot.Core.csproj" />
+    <ProjectReference Include="..\TradingBot.Data\TradingBot.Data.csproj" />
+    <ProjectReference Include="..\TradingBot.Exchange\TradingBot.Exchange.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,50 @@
+[
+  {
+    "BarOpenTime": "2026-04-22T21:00:00Z",
+    "Strategy": "BREAKOUT_DON",
+    "Side": "SELL",
+    "Regime": "TRENDING_DOWN",
+    "EntryPrice": 42345.77562439,
+    "StopLoss": 42767.23585418,
+    "TakeProfit": 41502.85516479,
+    "AtrValue": 280.97348653,
+    "Confidence": 1,
+    "SizeMultiplier": 1.0
+  },
+  {
+    "BarOpenTime": "2026-04-23T22:00:00Z",
+    "Strategy": "BREAKOUT_DON",
+    "Side": "SELL",
+    "Regime": "TRENDING_DOWN",
+    "EntryPrice": 40762.55760490,
+    "StopLoss": 41148.45495156,
+    "TakeProfit": 39990.76291158,
+    "AtrValue": 257.26489777,
+    "Confidence": 1,
+    "SizeMultiplier": 1.0
+  },
+  {
+    "BarOpenTime": "2026-04-26T00:00:00Z",
+    "Strategy": "BREAKOUT_DON",
+    "Side": "SELL",
+    "Regime": "TRENDING_DOWN",
+    "EntryPrice": 37903.39103805,
+    "StopLoss": 38285.35520196,
+    "TakeProfit": 37139.46271024,
+    "AtrValue": 254.64277594,
+    "Confidence": 1,
+    "SizeMultiplier": 1.0
+  },
+  {
+    "BarOpenTime": "2026-04-28T02:00:00Z",
+    "Strategy": "BREAKOUT_DON",
+    "Side": "SELL",
+    "Regime": "TRENDING_DOWN",
+    "EntryPrice": 35044.30770041,
+    "StopLoss": 35486.48543399,
+    "TakeProfit": 34159.95223326,
+    "AtrValue": 294.78515572,
+    "Confidence": 1,
+    "SizeMultiplier": 1.0
+  }
+]

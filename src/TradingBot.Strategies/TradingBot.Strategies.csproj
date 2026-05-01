@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
+    <!-- Indicator math for the recompute fallback path of IIndicatorEngine. The
+         live pre-cache (S4) already pulls Skender; we depend on the same major. -->
+    <PackageReference Include="Skender.Stock.Indicators" Version="2.6.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TradingBot.Core\TradingBot.Core.csproj" />
+    <!-- IIndicatorCache, IndicatorComputer (for the recompute fallback). -->
+    <ProjectReference Include="..\TradingBot.MarketData\TradingBot.MarketData.csproj" />
+    <!-- ICandleRepository, ISymbolRepository, IRegimeRepository. -->
+    <ProjectReference Include="..\TradingBot.Data\TradingBot.Data.csproj" />
+  </ItemGroup>
+
+</Project>
