@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Serilog.Events;
 using Serilog.Parsing;
+using TradingBot.Core.Observability;
 using TradingBot.Observability.Logging;
 using Xunit;
 

@@ -1,5 +1,6 @@
 using Serilog.Core;
 using Serilog.Events;
+using TradingBot.Core.Observability;
 
 namespace TradingBot.Observability.Logging;
 

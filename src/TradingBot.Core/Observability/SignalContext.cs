@@ -1,4 +1,4 @@
-namespace TradingBot.Observability.Logging;
+namespace TradingBot.Core.Observability;
 
 public static class SignalContext
 {

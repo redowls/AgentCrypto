@@ -1,5 +1,5 @@
 using FluentAssertions;
-using TradingBot.Observability.Logging;
+using TradingBot.Core.Observability;
 using Xunit;
 
 namespace TradingBot.Tests.Observability;
