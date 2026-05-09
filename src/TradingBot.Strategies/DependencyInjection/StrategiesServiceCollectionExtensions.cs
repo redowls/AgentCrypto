@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using TradingBot.Core.Indicators;
+using TradingBot.Core.Observability;
 using TradingBot.Strategies.Abstractions;
 using TradingBot.Strategies.Channels;
 using TradingBot.Strategies.Configuration;
@@ -25,6 +27,8 @@ public static class StrategiesServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddStrategies(this IServiceCollection services, IConfiguration configuration)
     {
+        services.TryAddSingleton<ITradingMetrics, NullTradingMetrics>();
+
         // ---- Indicator engine + regime classifier (S5) -----------------------
         services.AddSingleton<IRegimeClassifier, RegimeClassifier>();
         services.AddScoped<IIndicatorEngine, IndicatorEngine>();
@@ -66,6 +70,8 @@ public static class StrategiesServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddStrategies(this IServiceCollection services)
     {
+        services.TryAddSingleton<ITradingMetrics, NullTradingMetrics>();
+
         services.AddSingleton<IRegimeClassifier, RegimeClassifier>();
         services.AddScoped<IIndicatorEngine, IndicatorEngine>();
 

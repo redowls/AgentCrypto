@@ -5,8 +5,10 @@ using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Objects;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using TradingBot.Core.Abstractions;
+using TradingBot.Core.Observability;
 using TradingBot.Exchange.Abstractions;
 using TradingBot.Exchange.Binance;
 using TradingBot.Exchange.Configuration;
@@ -33,6 +35,8 @@ public static class ExchangeServiceCollectionExtensions
         IConfiguration configuration,
         ISecretsProvider secrets)
     {
+        services.TryAddSingleton<ITradingMetrics, NullTradingMetrics>();
+
         // The Worker host already calls AddOptions<BinanceOptions>().Bind(...)
         // .ValidateDataAnnotations() once at startup (Microsoft.Extensions.
         // Options.DataAnnotations is referenced there, not here). Calling
