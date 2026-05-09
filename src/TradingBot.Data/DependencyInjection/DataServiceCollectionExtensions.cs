@@ -36,6 +36,7 @@ public static class DataServiceCollectionExtensions
         services.AddScoped<IAccountSnapshotRepository, AccountSnapshotRepository>();
         services.AddScoped<IRiskEventRepository,       RiskEventRepository>();
         services.AddScoped<IAiInteractionRepository,   AiInteractionRepository>();
+        services.AddScoped<IAlertJournalRepository,    AlertJournalRepository>();
 
         return services;
     }
