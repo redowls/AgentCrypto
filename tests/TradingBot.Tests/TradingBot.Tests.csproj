@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\TradingBot.Exchange\TradingBot.Exchange.csproj" />
     <ProjectReference Include="..\..\src\TradingBot.MarketData\TradingBot.MarketData.csproj" />
     <ProjectReference Include="..\..\src\TradingBot.Strategies\TradingBot.Strategies.csproj" />
+    <ProjectReference Include="..\..\src\TradingBot.Observability\TradingBot.Observability.csproj" />
     <ProjectReference Include="..\..\src\TradingBot.Worker\TradingBot.Worker.csproj" />
   </ItemGroup>
 
