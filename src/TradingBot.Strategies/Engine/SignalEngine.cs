@@ -7,6 +7,7 @@ using TradingBot.Core.Abstractions;
 using TradingBot.Core.Domain;
 using TradingBot.Core.Domain.Enums;
 using TradingBot.Core.Indicators;
+using TradingBot.Core.Observability;
 using TradingBot.Data.Abstractions;
 using TradingBot.MarketData.Channels;
 using TradingBot.Strategies.Abstractions;
@@ -46,6 +47,7 @@ public sealed class SignalEngine : BackgroundService
     private readonly IStrategySelector _selector;
     private readonly IClock _clock;
     private readonly SignalEngineOptions _options;
+    private readonly ITradingMetrics _metrics;
     private readonly ILogger<SignalEngine> _log;
 
     public SignalEngine(
@@ -56,7 +58,8 @@ public sealed class SignalEngine : BackgroundService
         IStrategySelector selector,
         IClock clock,
         IOptions<SignalEngineOptions> options,
-        ILogger<SignalEngine> log)
+        ILogger<SignalEngine> log,
+        ITradingMetrics? metrics = null)
     {
         _barClose   = barClose;
         _generated  = generated;
@@ -65,6 +68,7 @@ public sealed class SignalEngine : BackgroundService
         _selector   = selector;
         _clock      = clock;
         _options    = options.Value;
+        _metrics    = metrics ?? new NullTradingMetrics();
         _log        = log;
     }
 
@@ -197,6 +201,7 @@ public sealed class SignalEngine : BackgroundService
             }
 
             SignalCandidate? candidate;
+            var evalSw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 candidate = assignment.Strategy.Evaluate(snap, htfSnap, classification.Regime, ctx);
@@ -207,6 +212,11 @@ public sealed class SignalEngine : BackgroundService
                     "SignalEngine: {Strategy} threw on {Symbol}/{Interval}@{Bar}; ignoring",
                     assignment.Strategy.Name, evt.SymbolCode, evt.Interval, evt.Candle.OpenTime);
                 continue;
+            }
+            finally
+            {
+                evalSw.Stop();
+                _metrics.ObserveStrategyLatency(assignment.Strategy.Name, evalSw.Elapsed.TotalMilliseconds);
             }
 
             if (candidate is null) continue;
@@ -224,6 +234,9 @@ public sealed class SignalEngine : BackgroundService
                     assignment.Strategy.Name, evt.SymbolCode, evt.Interval, evt.Candle.OpenTime);
                 continue;
             }
+
+            using var _scope = SignalContext.BeginSignal(signal.SignalId);
+            _metrics.IncSignal(signal.Strategy, evt.SymbolCode, signal.Side);
 
             _log.LogInformation(
                 "SignalEngine: GENERATED {Strategy} {Side} {Symbol}/{Interval}@{Bar} entry={Entry} SL={SL} TP={TP} ATR={ATR} regime={Regime} sizeMult={Size:F2} reason={Reason}",
