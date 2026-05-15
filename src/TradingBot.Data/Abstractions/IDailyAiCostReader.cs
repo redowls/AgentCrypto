@@ -1,9 +1,9 @@
-namespace TradingBot.AI.Abstractions;
+namespace TradingBot.Data.Abstractions;
 
 /// <summary>
 /// Reads aggregated AI cost from <c>dbo.AiInteractions</c> for a date window.
-/// Used by the daily digest job (§11) so the Observability module doesn't
-/// need to know the AI cost journal schema.
+/// Lives in Data (not AI) so Observability can consume it via the existing
+/// Data project reference instead of pulling the whole AI module.
 /// </summary>
 public interface IDailyAiCostReader
 {

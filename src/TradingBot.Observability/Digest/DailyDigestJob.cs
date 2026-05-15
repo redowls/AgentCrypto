@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
-using TradingBot.AI.Abstractions;
 using TradingBot.Core.Abstractions;
 using TradingBot.Core.Domain.Enums;
 using TradingBot.Data.Abstractions;

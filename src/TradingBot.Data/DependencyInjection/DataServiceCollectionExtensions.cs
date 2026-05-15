@@ -36,7 +36,13 @@ public static class DataServiceCollectionExtensions
         services.AddScoped<IAccountSnapshotRepository, AccountSnapshotRepository>();
         services.AddScoped<IRiskEventRepository,       RiskEventRepository>();
         services.AddScoped<IAiInteractionRepository,   AiInteractionRepository>();
+        services.AddScoped<INewsSentimentRepository,   NewsSentimentRepository>();
+        services.AddScoped<IAiJournalRepository,       AiJournalRepository>();
+        services.AddScoped<ICorrelationRepository,     CorrelationRepository>();
+        services.AddScoped<IExecutionDiagnosticsRepository, ExecutionDiagnosticsRepository>();
+        services.AddScoped<IBracketLinkRepository,     BracketLinkRepository>();
         services.AddScoped<IAlertJournalRepository,    AlertJournalRepository>();
+        services.AddScoped<IDailyAiCostReader,         DailyAiCostReader>();
 
         return services;
     }

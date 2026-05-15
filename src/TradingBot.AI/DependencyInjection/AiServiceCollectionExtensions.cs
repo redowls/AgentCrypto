@@ -41,7 +41,7 @@ public static class AiServiceCollectionExtensions
         ISecretsProvider        secrets)
     {
         services.TryAddSingleton<ITradingMetrics, NullTradingMetrics>();
-        services.AddScoped<IDailyAiCostReader, DailyAiCostReader>();
+        // IDailyAiCostReader is registered by AddTradingData (lives in Data layer).
 
         // ── Options ─────────────────────────────────────────────────────
         services.AddOptions<ClaudeOptions>()

@@ -1,12 +1,14 @@
 using Dapper;
-using TradingBot.AI.Abstractions;
+using TradingBot.Data.Abstractions;
 using TradingBot.Data.Connection;
 
-namespace TradingBot.AI.Cost;
+namespace TradingBot.Data.Repositories;
 
 public sealed class DailyAiCostReader : IDailyAiCostReader
 {
     private readonly IDbConnectionFactory _connectionFactory;
+
+    static DailyAiCostReader() => DapperBootstrap.EnsureInitialised();
 
     public DailyAiCostReader(IDbConnectionFactory connectionFactory)
     {
