@@ -1,0 +1,64 @@
+{
+  "name": "tradingbot-news-ingest",
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "Every 5 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] }
+      }
+    },
+    {
+      "id": "fetch",
+      "name": "CryptoPanic GET",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [480, 300],
+      "parameters": {
+        "url": "=https://cryptopanic.com/api/v1/posts/?auth_token={{$credentials.cryptopanic.token}}&kind=news",
+        "method": "GET",
+        "responseFormat": "json"
+      },
+      "credentials": { "cryptopanicApi": { "id": "cryptopanic", "name": "cryptopanic" } }
+    },
+    {
+      "id": "filter",
+      "name": "Filter new posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "parameters": {
+        "jsCode": "const last = $getWorkflowStaticData('global').lastRun || '1970-01-01T00:00:00Z';\nconst items = $input.first().json.results || [];\nconst kept = items.filter(i => i.published_at > last);\nif (kept.length) $getWorkflowStaticData('global').lastRun = kept[0].published_at;\nreturn kept.map(i => ({ json: i }));"
+      }
+    },
+    {
+      "id": "post",
+      "name": "POST to bot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [960, 300],
+      "parameters": {
+        "url": "={{$env.TRADINGBOT_NEWS_WEBHOOK_URL}}/newsfeed/push",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Webhook-Secret", "value": "={{$credentials.tradingbot.webhookSecret}}" },
+            { "name": "Content-Type",     "value": "application/x-ndjson" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}"
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 min":     { "main": [[{ "node": "CryptoPanic GET",   "type": "main", "index": 0 }]] },
+    "CryptoPanic GET": { "main": [[{ "node": "Filter new posts", "type": "main", "index": 0 }]] },
+    "Filter new posts":{ "main": [[{ "node": "POST to bot",      "type": "main", "index": 0 }]] }
+  }
+}
