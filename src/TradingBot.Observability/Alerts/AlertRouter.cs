@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TradingBot.Core.Abstractions;
@@ -19,7 +20,7 @@ public sealed class AlertRouter : IAlertSink
 {
     private readonly IReadOnlyList<IAlertTransport> _transports;
     private readonly AlertDedupCache _dedup;
-    private readonly IAlertJournalRepository _journal;
+    private readonly IServiceScopeFactory _scopes;
     private readonly IClock _clock;
     private readonly AlertRoutingOptions _opts;
     private readonly ITradingMetrics _metrics;
@@ -28,7 +29,7 @@ public sealed class AlertRouter : IAlertSink
     public AlertRouter(
         IEnumerable<IAlertTransport> transports,
         AlertDedupCache dedup,
-        IAlertJournalRepository journal,
+        IServiceScopeFactory scopes,
         IClock clock,
         IOptions<AlertRoutingOptions> opts,
         ITradingMetrics metrics,
@@ -36,7 +37,7 @@ public sealed class AlertRouter : IAlertSink
     {
         _transports = transports.ToList();
         _dedup      = dedup;
-        _journal    = journal;
+        _scopes     = scopes;
         _clock      = clock;
         _opts       = opts.Value;
         _metrics    = metrics;
@@ -75,7 +76,12 @@ public sealed class AlertRouter : IAlertSink
 
         try
         {
-            await _journal.InsertAsync(new AlertJournalRow(
+            // IAlertJournalRepository is scoped — open a fresh scope per call
+            // since AlertRouter itself is a singleton consumed by other singletons
+            // (KillSwitch, watchdog).
+            await using var scope = _scopes.CreateAsyncScope();
+            var journal = scope.ServiceProvider.GetRequiredService<IAlertJournalRepository>();
+            await journal.InsertAsync(new AlertJournalRow(
                 SentAtUtc:     now,
                 Severity:      (byte)severity,
                 Title:         title,

@@ -3,6 +3,11 @@ using TradingBot.Exchange.Abstractions;
 
 namespace TradingBot.Exchange.Resilience;
 
+// BinanceKillSwitch stays in Exchange. IAlertSink lives in TradingBot.Risk, which
+// already references Exchange — making Exchange reference Risk would cycle. The
+// CRITICAL alert for kill-switch trips is fired via Risk.KillSwitch (which mirrors
+// state from Binance's switch on every read of IsTripped); the BinanceKillSwitch
+// HealthCheck (§11) also exposes the trip state to /health/readiness.
 public sealed class BinanceKillSwitch(ILogger<BinanceKillSwitch> logger) : IBinanceKillSwitch
 {
     private readonly object _gate = new();
