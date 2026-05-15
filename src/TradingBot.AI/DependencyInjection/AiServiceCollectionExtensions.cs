@@ -41,6 +41,7 @@ public static class AiServiceCollectionExtensions
         ISecretsProvider        secrets)
     {
         services.TryAddSingleton<ITradingMetrics, NullTradingMetrics>();
+        services.AddScoped<IDailyAiCostReader, DailyAiCostReader>();
 
         // ── Options ─────────────────────────────────────────────────────
         services.AddOptions<ClaudeOptions>()
