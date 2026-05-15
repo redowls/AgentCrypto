@@ -26,6 +26,7 @@ public sealed class WebSocketWatchdogTests
 
         var watchdog = new WebSocketWatchdog(registry, sink,
             new TestOptionsMonitor<BinanceOptions>(options.Value),
+            new TradingBot.Core.Observability.NullTradingMetrics(),
             NullLogger<WebSocketWatchdog>.Instance);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -58,6 +59,7 @@ public sealed class WebSocketWatchdogTests
 
         var watchdog = new WebSocketWatchdog(registry, sink,
             new TestOptionsMonitor<BinanceOptions>(options.Value),
+            new TradingBot.Core.Observability.NullTradingMetrics(),
             NullLogger<WebSocketWatchdog>.Instance);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
