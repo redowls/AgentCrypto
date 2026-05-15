@@ -39,7 +39,7 @@
     <ProjectReference Include="..\TradingBot.Risk\TradingBot.Risk.csproj" />
     <ProjectReference Include="..\TradingBot.Execution\TradingBot.Execution.csproj" />
     <ProjectReference Include="..\TradingBot.AI\TradingBot.AI.csproj" />
-    <ProjectReference Include="..\TradingBot.Backtest\TradingBot.Backtest.csproj" />
+    <ProjectReference Include="..\TradingBot.Observability\TradingBot.Observability.csproj" />
   </ItemGroup>
 
   <ItemGroup>

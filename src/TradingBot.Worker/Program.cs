@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Prometheus;
 using Serilog;
 using TradingBot.AI.DependencyInjection;
 using TradingBot.AI.Sentiment;
@@ -10,7 +11,10 @@ using TradingBot.Data.DependencyInjection;
 using TradingBot.Exchange.DependencyInjection;
 using TradingBot.Execution.DependencyInjection;
 using TradingBot.MarketData.DependencyInjection;
+using TradingBot.Observability.DependencyInjection;
+using TradingBot.Observability.HealthChecks;
 using TradingBot.Risk.DependencyInjection;
+using TradingBot.Risk.KillSwitch;
 using TradingBot.Strategies.DependencyInjection;
 using TradingBot.Worker.Configuration;
 using TradingBot.Worker.HealthChecks;
@@ -85,6 +89,7 @@ try
     builder.Services.AddRisk(builder.Configuration);
     builder.Services.AddExecution(builder.Configuration);
     builder.Services.AddAi(builder.Configuration, bootstrapSecrets);
+    builder.Services.AddObservability(builder.Configuration, bootstrapSecrets);
 
     // ---- Hosted services -------------------------------------------------------
     // Order matters: migrations must run before anything that touches the DB.
@@ -92,9 +97,14 @@ try
     builder.Services.AddHostedService<StartupBannerHostedService>();
 
     // ---- Health checks ---------------------------------------------------------
+    // §11: liveness = process alive only (independent of external services).
+    // Readiness = DB + Binance REST + WS + KillSwitch.
     var hcBuilder = builder.Services.AddHealthChecks()
-        .AddCheck<BinancePingHealthCheck>("binance", tags: ["live", "ready"])
-        .AddCheck<WebSocketHealthCheck>("websocket", tags: ["live"]);
+        .AddCheck<ProcessAliveHealthCheck>("process",                       tags: ["live"])
+        .AddCheck<BinancePingHealthCheck>("binance",                        tags: ["ready"])
+        .AddCheck<WebSocketHealthCheck>("websocket",                        tags: ["ready"])
+        .AddCheck<KillSwitchHealthCheck>("killswitch",                      tags: ["ready"])
+        .AddCheck<BinanceKillSwitchHealthCheck>("binance_killswitch",       tags: ["ready"]);
 
     if (!string.IsNullOrWhiteSpace(dbConn))
     {
@@ -110,22 +120,36 @@ try
         ResponseWriter = WriteHealthResponse,
     });
 
-    app.MapHealthChecks("/health/ready", new()
+    app.MapHealthChecks("/health/readiness", new()
     {
         Predicate = reg => reg.Tags.Contains("ready"),
         ResponseWriter = WriteHealthResponse,
     });
 
-    app.MapHealthChecks("/health/live", new()
+    app.MapHealthChecks("/health/liveness", new()
     {
         Predicate = reg => reg.Tags.Contains("live"),
         ResponseWriter = WriteHealthResponse,
     });
 
+    // §11 Prometheus exposition.
+    app.MapMetrics();
+
     // §S9 — n8n-friendly news webhook. Bot accepts NDJSON-style or single
     // payloads at POST /newsfeed/push (auth via optional shared secret in
     // News:WebhookSharedSecret).
     app.MapNewsfeedPush();
+
+    // §11 env-gated test endpoint — only registered outside Production.
+    if (!builder.Environment.IsProduction())
+    {
+        app.MapPost("/admin/test-alert",
+            async (TestAlertRequest req, IAlertSink alerts, CancellationToken ct) =>
+            {
+                await alerts.SendAsync(req.Severity, req.Title, req.Body ?? "Test alert", ct);
+                return Results.Accepted();
+            });
+    }
 
     await app.RunAsync();
     return 0;
@@ -163,3 +187,5 @@ static Task WriteHealthResponse(HttpContext context, HealthReport report)
 
 // Make the implicit Program class available for WebApplicationFactory in tests.
 public partial class Program;
+
+internal sealed record TestAlertRequest(AlertSeverity Severity, string Title, string? Body);
