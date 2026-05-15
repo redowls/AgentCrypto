@@ -1,13 +1,45 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TradingBot.Backtest</RootNamespace>
+    <AssemblyName>TradingBot.Backtest</AssemblyName>
+    <!-- Share the Worker's user-secrets store so a single `dotnet user-secrets set`
+         configures both binaries (connection string, API keys, etc.). -->
+    <UserSecretsId>tradingbot-worker-9f3a4c11-2026</UserSecretsId>
+    <!-- Microsoft.Data.SqlClient 5.x requires ICU at runtime. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TradingBot.Core\TradingBot.Core.csproj" />
+    <ProjectReference Include="..\TradingBot.Data\TradingBot.Data.csproj" />
+    <ProjectReference Include="..\TradingBot.Exchange\TradingBot.Exchange.csproj" />
+    <ProjectReference Include="..\TradingBot.MarketData\TradingBot.MarketData.csproj" />
     <ProjectReference Include="..\TradingBot.Strategies\TradingBot.Strategies.csproj" />
     <ProjectReference Include="..\TradingBot.Risk\TradingBot.Risk.csproj" />
+    <ProjectReference Include="..\TradingBot.Execution\TradingBot.Execution.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TradingBot.Tests" />
   </ItemGroup>
 
 </Project>

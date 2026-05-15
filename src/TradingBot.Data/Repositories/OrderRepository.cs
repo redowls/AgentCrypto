@@ -112,6 +112,75 @@ public sealed class OrderRepository(IDbConnectionFactory connectionFactory) : IO
         }, cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
 
+    public async Task<int> SetExchangeOrderIdAsync(
+        long orderId,
+        long exchangeOrderId,
+        string newStatus,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            UPDATE dbo.Orders
+            SET    ExchangeOrderId = @ExchangeOrderId,
+                   Status          = @Status,
+                   LastUpdatedAt   = SYSUTCDATETIME()
+            WHERE  OrderId = @OrderId;
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            OrderId         = orderId,
+            ExchangeOrderId = exchangeOrderId,
+            Status          = newStatus,
+        }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    public async Task<int> UpdateStatusOnlyAsync(
+        long orderId,
+        string newStatus,
+        string? notes,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            UPDATE dbo.Orders
+            SET    Status        = @Status,
+                   Notes         = COALESCE(@Notes, Notes),
+                   LastUpdatedAt = SYSUTCDATETIME()
+            WHERE  OrderId = @OrderId;
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            OrderId = orderId,
+            Status  = newStatus,
+            Notes   = notes,
+        }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<Order>> GetNonTerminalOlderThanAsync(
+        DateTime olderThanUtc,
+        int maxRows,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT TOP (@MaxRows)
+                   OrderId, SignalId, SymbolId, AccountType, ClientOrderId, ExchangeOrderId,
+                   OrderType, Side, PositionSide, Quantity, Price, StopPrice,
+                   TimeInForce, ReduceOnly, Status, FilledQty, AvgFillPrice,
+                   CommissionPaid, CommissionAsset, SubmittedAt, LastUpdatedAt, Notes
+            FROM   dbo.Orders
+            WHERE  Status NOT IN ('FILLED','CANCELED','REJECTED','EXPIRED','ERROR')
+              AND  LastUpdatedAt <= @OlderThanUtc
+            ORDER  BY LastUpdatedAt ASC;
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await conn.QueryAsync<Order>(new CommandDefinition(sql, new
+        {
+            OlderThanUtc = olderThanUtc,
+            MaxRows      = maxRows,
+        }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+        return rows.AsList();
+    }
+
     public async Task<IReadOnlyList<Order>> GetOpenAsync(int symbolId, CancellationToken cancellationToken)
     {
         const string sql = """

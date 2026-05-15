@@ -8,7 +8,7 @@ using AccountType = TradingBot.Exchange.Abstractions.AccountType;
 
 namespace TradingBot.Exchange.Binance;
 
-public sealed class BinanceSpotGateway : IBinanceGateway
+public sealed class BinanceSpotGateway : IBinanceGateway, ISpotOcoCapability
 {
     private readonly IBinanceRestClient _rest;
     private readonly IBinanceSocketClient _socket;
@@ -255,6 +255,67 @@ public sealed class BinanceSpotGateway : IBinanceGateway
         var sub = BinanceCallOutcome.Unwrap(result, "spot.subscribeUserData");
         return new StreamSubscriptionHandle(sub, _socket, $"spot.userData.{listenKey[..Math.Min(8, listenKey.Length)]}");
     }
+
+    public Task<SpotOcoResult> PlaceOcoAsync(SpotOcoRequest req, CancellationToken cancellationToken) =>
+        _pipeline.ExecuteAsync(async ct =>
+        {
+            _log.LogInformation(
+                "Spot OCO PLACE corr={CorrelationId} sym={Symbol} side={Side} qty={Qty} tp={Tp} sl={Sl}->{SlLim} listCid={ListCid}",
+                req.CorrelationId, req.Symbol, req.Side, req.Quantity,
+                req.TakeProfitPrice, req.StopTriggerPrice, req.StopLimitPrice, req.ListClientOrderId);
+
+            var side = BinanceIntervalMap.ParseSide(req.Side);
+            var tif  = BinanceIntervalMap.ParseTif(req.TimeInForce ?? "GTC") ?? TimeInForce.GoodTillCanceled;
+
+            // Deprecated-but-functional OCO; arg order:
+            //   symbol, side, quantity, price, stopPrice, stopLimitPrice?,
+            //   stopClientOrderId, limitClientOrderId, listClientOrderId, ...
+            var result = await _rest.SpotApi.Trading.PlaceOcoOrderAsync(
+                symbol:             req.Symbol,
+                side:               side,
+                quantity:           req.Quantity,
+                price:              req.TakeProfitPrice,
+                stopPrice:          req.StopTriggerPrice,
+                stopLimitPrice:     req.StopLimitPrice,
+                stopClientOrderId:  req.StopClientId,
+                limitClientOrderId: req.TakeProfitClientId,
+                listClientOrderId:  req.ListClientOrderId,
+                stopLimitTimeInForce: tif,
+                ct: ct).ConfigureAwait(false);
+
+            var data = BinanceCallOutcome.Unwrap(result, "spot.placeOco");
+
+            // Two child orders. The TP leg uses limitClientOrderId we supplied;
+            // the SL leg uses stopClientOrderId. Match by ClientOrderId rather
+            // than positional order — Binance has reversed the array on us before.
+            long tpId = 0, slId = 0;
+            foreach (var o in data.Orders)
+            {
+                if (string.Equals(o.ClientOrderId, req.TakeProfitClientId, StringComparison.Ordinal)) tpId = o.OrderId;
+                else if (string.Equals(o.ClientOrderId, req.StopClientId, StringComparison.Ordinal)) slId = o.OrderId;
+            }
+
+            return new SpotOcoResult(
+                Symbol:                    data.Symbol,
+                ListClientOrderId:         data.ListClientOrderId ?? req.ListClientOrderId,
+                OrderListId:               data.Id,
+                TakeProfitExchangeOrderId: tpId,
+                StopExchangeOrderId:       slId,
+                ListStatus:                data.ListOrderStatus.ToString().ToUpperInvariant());
+        }, "spot.placeOco", cancellationToken);
+
+    public Task<bool> CancelOcoAsync(string symbol, string listClientOrderId, CancellationToken cancellationToken) =>
+        _pipeline.ExecuteAsync(async ct =>
+        {
+            _log.LogInformation("Spot OCO CANCEL sym={Symbol} listCid={ListCid}", symbol, listClientOrderId);
+            var result = await _rest.SpotApi.Trading
+                .CancelOcoOrderAsync(symbol, orderListId: null, listClientOrderId: listClientOrderId,
+                    newClientOrderId: null, ct: ct).ConfigureAwait(false);
+            if (result.Success) return true;
+            // -2011 UNKNOWN_ORDER_COMPOSITION / -2013 NO_SUCH_ORDER → list already gone, idempotent.
+            if (result.Error?.Code is -2011 or -2013) return false;
+            throw BinanceCallOutcome.ToException(result, "spot.cancelOco");
+        }, "spot.cancelOco", cancellationToken);
 
     private static SpotOrderType MapSpotOrderType(string type) => type switch
     {

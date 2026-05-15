@@ -9,6 +9,12 @@ public sealed class BinanceOptions
     /// When true, both REST and WebSocket clients target the Binance Testnet.
     public bool UseTestnet { get; set; } = true;
 
+    /// Enable the SPOT account paths — gateway, REST client, userData WS.
+    public bool EnableSpot { get; set; } = true;
+
+    /// Enable the USDⓈ-M Futures account paths.
+    public bool EnableUsdmFutures { get; set; } = true;
+
     /// Receive window for signed REST requests, in milliseconds.
     [Range(1_000, 60_000)]
     public int RecvWindowMs { get; set; } = 5_000;

@@ -1,0 +1,19 @@
+{
+  "FinalEquity": 10000,
+  "NetPnlUsd": 0,
+  "CagrPct": 0,
+  "Sharpe": 0,
+  "Sortino": 0,
+  "Calmar": 0,
+  "DeflatedSharpe": 0,
+  "MaxDrawdownPct": 0,
+  "MddPeakAt": "2026-06-01T00:59:59Z",
+  "MddTroughAt": "2026-06-01T00:59:59Z",
+  "RecoveryFactor": 0,
+  "TradeCount": 0,
+  "WinRatePct": 0,
+  "ProfitFactor": 0,
+  "AvgHoldMinutes": 0,
+  "PerStrategy": {},
+  "PerRegime": {}
+}

@@ -2,10 +2,35 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
+
+    <!-- §8.3 nightly correlation refresh runs as a Quartz job alongside the
+         existing gap-detection job in TradingBot.MarketData. -->
+    <PackageReference Include="Quartz" Version="3.13.1" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
+
+    <!-- KillSwitch persists its state to Redis (when configured) so all process
+         instances see the same flag; falls back to in-memory otherwise. -->
+    <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
+
+    <!-- Funding-rate cache (60s TTL) avoids re-pinging Binance per signal. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TradingBot.Core\TradingBot.Core.csproj" />
+    <!-- ICorrelationRepository, IAccountSnapshotRepository, IPositionRepository,
+         IRiskEventRepository, ITradeHistoryRepository, ICandleRepository. -->
+    <ProjectReference Include="..\TradingBot.Data\TradingBot.Data.csproj" />
+    <!-- ISymbolFilters (clamping), IBinanceGatewayResolver (funding rate +
+         live-price fallback), IBinanceKillSwitch (existing 418 trip flag). -->
+    <ProjectReference Include="..\TradingBot.Exchange\TradingBot.Exchange.csproj" />
+    <!-- ILiveCandleCache for real-time mark-to-market. -->
+    <ProjectReference Include="..\TradingBot.MarketData\TradingBot.MarketData.csproj" />
   </ItemGroup>
 
 </Project>

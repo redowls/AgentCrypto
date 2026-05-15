@@ -38,9 +38,16 @@ public static class SignalStatuses
 
 public static class OrderStatuses
 {
+    // Pre-exchange (local-only) states from the §6.4 state machine.
+    public const string Pending         = "PENDING";       // local row created, not yet submitted
+    public const string Submitting      = "SUBMITTING";    // REST call in flight
+    public const string Error           = "ERROR";         // submit failed irrecoverably (terminal)
+
+    // Exchange-acknowledged states.
     public const string New             = "NEW";
     public const string PartiallyFilled = "PARTIALLY_FILLED";
     public const string Filled          = "FILLED";
+    public const string Canceling       = "CANCELING";     // local intent — REST cancel in flight
     public const string Cancelled       = "CANCELED";
     public const string Rejected        = "REJECTED";
     public const string Expired         = "EXPIRED";

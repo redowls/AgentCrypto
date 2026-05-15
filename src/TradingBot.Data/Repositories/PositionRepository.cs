@@ -97,6 +97,51 @@ public sealed class PositionRepository(IDbConnectionFactory connectionFactory) :
             cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
 
+    public async Task<int> ExtendAsync(
+        long positionId,
+        decimal addedQuantity,
+        decimal addedFillPrice,
+        CancellationToken cancellationToken)
+    {
+        // Weighted-average entry price recomputed in-place. Only OPEN
+        // positions can be extended; CLOSING/CLOSED rows are no-ops.
+        const string sql = """
+            UPDATE dbo.Positions
+            SET    AvgEntryPrice = ((Quantity * AvgEntryPrice) + (@Qty * @Px)) /
+                                   NULLIF(Quantity + @Qty, 0),
+                   Quantity      = Quantity + @Qty
+            WHERE  PositionId = @PositionId AND Status = 'OPEN';
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            PositionId = positionId,
+            Qty        = addedQuantity,
+            Px         = addedFillPrice,
+        }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    public async Task<int> ReduceQuantityAsync(
+        long positionId,
+        decimal removedQuantity,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            UPDATE dbo.Positions
+            SET    Quantity = CASE
+                                WHEN Quantity - @Qty < 0 THEN 0
+                                ELSE Quantity - @Qty
+                              END
+            WHERE  PositionId = @PositionId AND Status IN ('OPEN','CLOSING');
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            PositionId = positionId,
+            Qty        = removedQuantity,
+        }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
     public async Task<int> CloseAsync(
         long positionId,
         DateTime closedAtUtc,

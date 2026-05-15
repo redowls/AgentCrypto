@@ -53,4 +53,27 @@ public sealed class TradeHistoryRepository(IDbConnectionFactory connectionFactor
                 cancellationToken: cancellationToken)).ConfigureAwait(false);
         return rows.AsList();
     }
+
+    public async Task<IReadOnlyList<TradeHistory>> GetInRangeAsync(
+        DateTime fromUtcInclusive,
+        DateTime toUtcExclusive,
+        int      take,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT TOP(@Take) TradeHistoryId, PositionId, SymbolId, Strategy, Side,
+                   EntryTime, ExitTime, HoldingMinutes,
+                   EntryPrice, ExitPrice, Quantity,
+                   GrossPnlUsd, FeesUsd, NetPnlUsd, R_Multiple AS RMultiple, ExitReason
+            FROM   dbo.TradeHistory
+            WHERE  ExitTime >= @From AND ExitTime < @To
+            ORDER BY ExitTime DESC;
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await conn.QueryAsync<TradeHistory>(
+            new CommandDefinition(sql,
+                new { From = fromUtcInclusive, To = toUtcExclusive, Take = take },
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+        return rows.AsList();
+    }
 }

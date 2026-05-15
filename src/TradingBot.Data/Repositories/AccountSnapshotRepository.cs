@@ -42,4 +42,36 @@ public sealed class AccountSnapshotRepository(IDbConnectionFactory connectionFac
             new CommandDefinition(sql, new { AccountType = accountType }, cancellationToken: cancellationToken))
             .ConfigureAwait(false);
     }
+
+    public async Task<decimal?> GetMaxEquityAsync(string accountType, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT MAX(EquityUsd) FROM dbo.AccountSnapshots
+            WHERE AccountType = @AccountType;
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.ExecuteScalarAsync<decimal?>(
+            new CommandDefinition(sql, new { AccountType = accountType }, cancellationToken: cancellationToken))
+            .ConfigureAwait(false);
+    }
+
+    public async Task<AccountSnapshot?> GetFirstAtOrAfterAsync(
+        string accountType,
+        DateTime fromUtcInclusive,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT TOP(1) SnapshotId, AccountType, SnapshotTime, EquityUsd, AvailableUsd,
+                          UnrealizedPnl, OpenPositions, GrossExposure, NetExposure, Drawdown
+            FROM   dbo.AccountSnapshots
+            WHERE  AccountType = @AccountType AND SnapshotTime >= @FromUtc
+            ORDER BY SnapshotTime ASC;
+        """;
+        await using var conn = await connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.QuerySingleOrDefaultAsync<AccountSnapshot>(
+            new CommandDefinition(sql,
+                new { AccountType = accountType, FromUtc = fromUtcInclusive },
+                cancellationToken: cancellationToken))
+            .ConfigureAwait(false);
+    }
 }
