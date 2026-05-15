@@ -41,8 +41,11 @@ dotnet build
 # Run the worker
 dotnet run --project src/TradingBot.Worker
 
-# In another shell, hit the health endpoint
-curl http://localhost:5080/health
+# In another shell, hit the health + metrics endpoints
+curl http://localhost:5080/health           # full diagnostic
+curl http://localhost:5080/health/liveness  # process alive
+curl http://localhost:5080/health/readiness # DB + Binance + WS + KillSwitch
+curl http://localhost:5080/metrics          # Prometheus exposition (§11)
 ```
 
 You should see a `Bot host started` log line and `/health` should return JSON with at least the `binance` and `websocket` checks. The `binance` check pings Binance testnet REST; if your network blocks it you'll see `Unhealthy`.
