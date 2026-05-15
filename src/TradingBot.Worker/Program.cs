@@ -3,7 +3,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Serilog;
 using TradingBot.AI.DependencyInjection;
-using TradingBot.Backtest.DependencyInjection;
+using TradingBot.AI.Sentiment;
 using TradingBot.Core.Abstractions;
 using TradingBot.Core.Time;
 using TradingBot.Data.DependencyInjection;
@@ -56,10 +56,7 @@ try
         .ValidateDataAnnotations()
         .ValidateOnStart();
 
-    builder.Services
-        .AddOptions<TelegramOptions>()
-        .Bind(builder.Configuration.GetSection(TelegramOptions.SectionName));
-        // Telegram options validated only when Telegram:Enabled = true (S11.3).
+    // TelegramOptions moved to TradingBot.Observability and bound by AddObservability (§11).
 
     builder.Services
         .AddOptions<DatabaseOptions>()
@@ -85,10 +82,9 @@ try
     builder.Services.AddBinanceExchange(builder.Configuration, bootstrapSecrets);
     builder.Services.AddMarketData(builder.Configuration);
     builder.Services.AddStrategies(builder.Configuration);
-    builder.Services.AddRisk();
-    builder.Services.AddExecution();
-    builder.Services.AddAi(bootstrapSecrets);
-    builder.Services.AddBacktest();
+    builder.Services.AddRisk(builder.Configuration);
+    builder.Services.AddExecution(builder.Configuration);
+    builder.Services.AddAi(builder.Configuration, bootstrapSecrets);
 
     // ---- Hosted services -------------------------------------------------------
     // Order matters: migrations must run before anything that touches the DB.
@@ -125,6 +121,11 @@ try
         Predicate = reg => reg.Tags.Contains("live"),
         ResponseWriter = WriteHealthResponse,
     });
+
+    // §S9 — n8n-friendly news webhook. Bot accepts NDJSON-style or single
+    // payloads at POST /newsfeed/push (auth via optional shared secret in
+    // News:WebhookSharedSecret).
+    app.MapNewsfeedPush();
 
     await app.RunAsync();
     return 0;
