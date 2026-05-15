@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TradingBot.Core\TradingBot.Core.csproj" />
     <ProjectReference Include="..\TradingBot.Data\TradingBot.Data.csproj" />
+    <ProjectReference Include="..\TradingBot.Exchange\TradingBot.Exchange.csproj" />
     <ProjectReference Include="..\TradingBot.Risk\TradingBot.Risk.csproj" />
   </ItemGroup>
 
