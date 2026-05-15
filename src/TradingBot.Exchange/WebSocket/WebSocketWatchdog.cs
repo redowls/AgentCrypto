@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TradingBot.Core.Observability;
 using TradingBot.Exchange.Abstractions;
 using TradingBot.Exchange.Configuration;
 
@@ -15,6 +16,7 @@ public sealed class WebSocketWatchdog : BackgroundService
     private readonly StreamRegistry _registry;
     private readonly IWebSocketAlertSink _alerts;
     private readonly IOptionsMonitor<BinanceOptions> _options;
+    private readonly ITradingMetrics _metrics;
     private readonly ILogger<WebSocketWatchdog> _log;
     private readonly HashSet<string> _firedAlerts = new(StringComparer.Ordinal);
 
@@ -22,11 +24,13 @@ public sealed class WebSocketWatchdog : BackgroundService
         StreamRegistry registry,
         IWebSocketAlertSink alerts,
         IOptionsMonitor<BinanceOptions> options,
+        ITradingMetrics metrics,
         ILogger<WebSocketWatchdog> log)
     {
         _registry = registry;
         _alerts = alerts;
         _options = options;
+        _metrics = metrics;
         _log = log;
     }
 
@@ -59,6 +63,17 @@ public sealed class WebSocketWatchdog : BackgroundService
         foreach (var rec in _registry.All())
         {
             var health = rec.ToHealth(staleAfter, now);
+
+            // Freshness gauge: seconds since last event for each tracked stream.
+            // -1 sentinel means "no event observed yet".
+            var lastEventSec = health.LastEventUtc.HasValue
+                ? (now - health.LastEventUtc.Value).TotalSeconds
+                : -1d;
+            _metrics.SetWsLastEventSeconds(
+                health.Account.ToString(),
+                health.StreamId,
+                lastEventSec);
+
             if (health.IsStale)
             {
                 if (_firedAlerts.Add(health.StreamId))
