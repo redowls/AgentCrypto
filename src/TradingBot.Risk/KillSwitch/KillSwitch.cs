@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using TradingBot.Core.Abstractions;
@@ -39,7 +40,7 @@ public sealed class KillSwitch : IKillSwitch
     private const string FieldTrippedAt   = "trippedAtUtc";
 
     private readonly IConnectionMultiplexer? _redis;
-    private readonly IRiskEventRepository _riskEvents;
+    private readonly IServiceScopeFactory _scopes;
     private readonly IBinanceKillSwitch _binanceKillSwitch;
     private readonly IAlertSink? _alerts;
     private readonly IClock _clock;
@@ -51,15 +52,18 @@ public sealed class KillSwitch : IKillSwitch
     private DateTime? _trippedAtUtc;
     private KillSwitchSource _source = KillSwitchSource.None;
 
+    // KillSwitch is a singleton; IRiskEventRepository is scoped (DB-backed).
+    // We acquire a fresh scope per Trip/Reset to avoid capturing a scoped
+    // service inside a singleton (DI scope-validation in Development).
     public KillSwitch(
-        IRiskEventRepository riskEvents,
+        IServiceScopeFactory scopes,
         IBinanceKillSwitch binanceKillSwitch,
         IClock clock,
         ILogger<KillSwitch> log,
         IConnectionMultiplexer? redis = null,
         IAlertSink? alerts = null)
     {
-        _riskEvents = riskEvents;
+        _scopes = scopes;
         _binanceKillSwitch = binanceKillSwitch;
         _clock = clock;
         _log = log;
@@ -116,7 +120,9 @@ public sealed class KillSwitch : IKillSwitch
         // already consistent and is what the gate relies on.
         try
         {
-            await _riskEvents.InsertAsync(new RiskEvent
+            await using var scope = _scopes.CreateAsyncScope();
+            var riskEvents = scope.ServiceProvider.GetRequiredService<IRiskEventRepository>();
+            await riskEvents.InsertAsync(new RiskEvent
             {
                 EventTime = trippedAtUtc,
                 EventType = EventTypeTrip,
@@ -186,7 +192,9 @@ public sealed class KillSwitch : IKillSwitch
 
         try
         {
-            await _riskEvents.InsertAsync(new RiskEvent
+            await using var scope = _scopes.CreateAsyncScope();
+            var riskEvents = scope.ServiceProvider.GetRequiredService<IRiskEventRepository>();
+            await riskEvents.InsertAsync(new RiskEvent
             {
                 EventTime = _clock.UtcNow,
                 EventType = EventTypeReset,

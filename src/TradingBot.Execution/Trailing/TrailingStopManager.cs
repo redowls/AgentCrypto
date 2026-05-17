@@ -37,9 +37,7 @@ public sealed class TrailingStopManager : BackgroundService
 {
     private readonly IBarCloseChannel _bars;
     private readonly IServiceScopeFactory _scopes;
-    private readonly IBracketPlacerResolver _brackets;
     private readonly IBinanceGatewayResolver _gateways;
-    private readonly IIndicatorEngine _indicators;
     private readonly IClock _clock;
     private readonly ExecutionOptions _options;
     private readonly ILogger<TrailingStopManager> _log;
@@ -47,21 +45,20 @@ public sealed class TrailingStopManager : BackgroundService
     private readonly Dictionary<long, PositionTracker> _trackers = new();
     private readonly object _trackerLock = new();
 
+    // IBracketPlacerResolver and IIndicatorEngine are scoped; this hosted
+    // service is a singleton. Both are resolved per bar-close from the same
+    // scope used for repositories.
     public TrailingStopManager(
         IBarCloseChannel bars,
         IServiceScopeFactory scopes,
-        IBracketPlacerResolver brackets,
         IBinanceGatewayResolver gateways,
-        IIndicatorEngine indicators,
         IClock clock,
         IOptions<ExecutionOptions> options,
         ILogger<TrailingStopManager> log)
     {
         _bars       = bars;
         _scopes     = scopes;
-        _brackets   = brackets;
         _gateways   = gateways;
-        _indicators = indicators;
         _clock      = clock;
         _options    = options.Value;
         _log        = log;
@@ -89,9 +86,11 @@ public sealed class TrailingStopManager : BackgroundService
     internal async Task OnBarCloseAsync(BarClosedEvent bar, CancellationToken ct)
     {
         await using var scope = _scopes.CreateAsyncScope();
-        var positions = scope.ServiceProvider.GetRequiredService<IPositionRepository>();
-        var signals   = scope.ServiceProvider.GetRequiredService<ISignalRepository>();
-        var symbols   = scope.ServiceProvider.GetRequiredService<ISymbolRepository>();
+        var positions  = scope.ServiceProvider.GetRequiredService<IPositionRepository>();
+        var signals    = scope.ServiceProvider.GetRequiredService<ISignalRepository>();
+        var symbols    = scope.ServiceProvider.GetRequiredService<ISymbolRepository>();
+        var brackets   = scope.ServiceProvider.GetRequiredService<IBracketPlacerResolver>();
+        var indicators = scope.ServiceProvider.GetRequiredService<IIndicatorEngine>();
 
         var open = await positions.GetOpenAsync(ct).ConfigureAwait(false);
         if (open.Count == 0) return;
@@ -110,7 +109,7 @@ public sealed class TrailingStopManager : BackgroundService
 
             if (!string.Equals(tf, bar.Interval, StringComparison.Ordinal)) continue;
 
-            var snapshot = await _indicators.GetSnapshotAsync(pos.SymbolId, tf, bar.Candle.OpenTime, ct).ConfigureAwait(false);
+            var snapshot = await indicators.GetSnapshotAsync(pos.SymbolId, tf, bar.Candle.OpenTime, ct).ConfigureAwait(false);
             if (snapshot is null || snapshot.Atr14 is not { } atr || atr <= 0m)
             {
                 _log.LogDebug("Trail tick skipped for pos={Pos} — no ATR snapshot", pos.PositionId);
@@ -153,7 +152,7 @@ public sealed class TrailingStopManager : BackgroundService
             tracker.UpdateSequence++;
             try
             {
-                var placer = _brackets.Resolve(pos.AccountType);
+                var placer = brackets.Resolve(pos.AccountType);
                 await placer.UpdateStopAsync(new BracketUpdateRequest(
                     PositionId:                pos.PositionId,
                     SignalId:                  pos.EntrySignalId ?? 0L,

@@ -33,7 +33,6 @@ public sealed class UserDataReactor : BackgroundService
     private readonly IBinanceWebSocketManager _ws;
     private readonly IServiceScopeFactory _scopes;
     private readonly OrderStateMachine _stateMachine;
-    private readonly IBracketPlacerResolver _brackets;
     private readonly IClock _clock;
     private readonly ExecutionOptions _options;
     private readonly ITradingMetrics _metrics;
@@ -41,11 +40,12 @@ public sealed class UserDataReactor : BackgroundService
     private readonly bool _spotEnabled;
     private readonly bool _futEnabled;
 
+    // IBracketPlacerResolver is scoped; this hosted service is a singleton.
+    // It is resolved per call from the same scope used for the repositories.
     public UserDataReactor(
         IBinanceWebSocketManager ws,
         IServiceScopeFactory scopes,
         OrderStateMachine stateMachine,
-        IBracketPlacerResolver brackets,
         IClock clock,
         IOptions<ExecutionOptions> options,
         ITradingMetrics metrics,
@@ -55,7 +55,6 @@ public sealed class UserDataReactor : BackgroundService
         _ws       = ws;
         _scopes   = scopes;
         _stateMachine = stateMachine;
-        _brackets = brackets;
         _clock    = clock;
         _options  = options.Value;
         _metrics  = metrics;
@@ -114,6 +113,7 @@ public sealed class UserDataReactor : BackgroundService
         var signals    = scope.ServiceProvider.GetRequiredService<ISignalRepository>();
         var symbols    = scope.ServiceProvider.GetRequiredService<ISymbolRepository>();
         var links      = scope.ServiceProvider.GetRequiredService<IBracketLinkRepository>();
+        var brackets   = scope.ServiceProvider.GetRequiredService<IBracketPlacerResolver>();
 
         var order = await orders.GetByClientOrderIdAsync(evt.ClientOrderId, ct).ConfigureAwait(false);
         if (order is null)
@@ -190,12 +190,12 @@ public sealed class UserDataReactor : BackgroundService
         var bracketLink = await links.GetByLegClientOrderIdAsync(evt.ClientOrderId, ct).ConfigureAwait(false);
         if (bracketLink is not null)
         {
-            await HandleBracketLegTerminalAsync(evt, order, newStatus, bracketLink, positions, ct).ConfigureAwait(false);
+            await HandleBracketLegTerminalAsync(evt, order, newStatus, bracketLink, positions, brackets, ct).ConfigureAwait(false);
             return;
         }
 
         // Entry-side terminal.
-        await HandleEntryTerminalAsync(evt, order, newStatus, positions, signals, symbols, ct).ConfigureAwait(false);
+        await HandleEntryTerminalAsync(evt, order, newStatus, positions, signals, symbols, brackets, ct).ConfigureAwait(false);
     }
 
     private async Task HandleEntryTerminalAsync(
@@ -205,6 +205,7 @@ public sealed class UserDataReactor : BackgroundService
         IPositionRepository positions,
         ISignalRepository signals,
         ISymbolRepository symbols,
+        IBracketPlacerResolver brackets,
         CancellationToken ct)
     {
         if (order.SignalId is not long sigId) return;
@@ -263,7 +264,7 @@ public sealed class UserDataReactor : BackgroundService
         // Place bracket.
         try
         {
-            var placer = _brackets.Resolve(order.AccountType);
+            var placer = brackets.Resolve(order.AccountType);
             await placer.PlaceAsync(new BracketPlacementRequest(
                 PositionId:      positionId,
                 SignalId:        sigId,
@@ -289,6 +290,7 @@ public sealed class UserDataReactor : BackgroundService
         string newStatus,
         BracketLink link,
         IPositionRepository positions,
+        IBracketPlacerResolver brackets,
         CancellationToken ct)
     {
         if (!string.Equals(newStatus, OrderStatuses.Filled, StringComparison.Ordinal))
@@ -300,7 +302,7 @@ public sealed class UserDataReactor : BackgroundService
 
         var leg = order.OrderId == link.StopOrderId ? "SL" : "TP";
 
-        var placer = _brackets.Resolve(link.AccountType);
+        var placer = brackets.Resolve(link.AccountType);
         await placer.HandleLegFilledAsync(new BracketLegFilled(
             ClientOrderId: evt.ClientOrderId,
             LegFilled:     leg,

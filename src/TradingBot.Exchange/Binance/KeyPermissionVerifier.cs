@@ -34,19 +34,40 @@ public sealed class KeyPermissionVerifier
 
     public async Task VerifyAsync(CancellationToken cancellationToken)
     {
-        var spotInfo = await _gateways.Get(AccountType.Spot)
-            .GetAccountAsync(cancellationToken).ConfigureAwait(false);
-        AssertSafe(spotInfo);
+        var opts = _options.Value;
+        AccountInfoSnapshot? spotInfo = null;
+        AccountInfoSnapshot? futInfo  = null;
+
+        if (opts.EnableSpot)
+        {
+            spotInfo = await _gateways.Get(AccountType.Spot)
+                .GetAccountAsync(cancellationToken).ConfigureAwait(false);
+            AssertSafe(spotInfo);
+        }
+
         // Futures account does not expose Permissions in the same shape; the
         // CanWithdraw flag from the futures account info is the relevant check.
-        var futInfo = await _gateways.Get(AccountType.UmFutures)
-            .GetAccountAsync(cancellationToken).ConfigureAwait(false);
-        AssertSafe(futInfo);
+        if (opts.EnableUsdmFutures)
+        {
+            futInfo = await _gateways.Get(AccountType.UmFutures)
+                .GetAccountAsync(cancellationToken).ConfigureAwait(false);
+            AssertSafe(futInfo);
+        }
+
+        if (spotInfo is null && futInfo is null)
+        {
+            throw new InvalidOperationException(
+                "REFUSING TO START: both Binance:EnableSpot and Binance:EnableUsdmFutures are false. Enable at least one account.");
+        }
 
         _log.LogInformation(
-            "Binance key permission check passed. spot.canTrade={SpotTrade} spot.canWithdraw={SpotWd} fut.canTrade={FutTrade} fut.canWithdraw={FutWd} perms=[{Perms}]",
-            spotInfo.CanTrade, spotInfo.CanWithdraw, futInfo.CanTrade, futInfo.CanWithdraw,
-            string.Join(",", spotInfo.Permissions));
+            "Binance key permission check passed. spot={SpotState} fut={FutState}",
+            spotInfo is null
+                ? "disabled"
+                : $"canTrade={spotInfo.CanTrade} canWithdraw={spotInfo.CanWithdraw} perms=[{string.Join(",", spotInfo.Permissions)}]",
+            futInfo is null
+                ? "disabled"
+                : $"canTrade={futInfo.CanTrade} canWithdraw={futInfo.CanWithdraw}");
     }
 
     private void AssertSafe(AccountInfoSnapshot info)

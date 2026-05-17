@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using TradingBot.Core.Domain;
 using TradingBot.Data.Abstractions;
@@ -82,8 +83,11 @@ public sealed class KillSwitchTests
         var riskRepo = new FakeRiskEventRepository();
         var binance  = new BinanceKillSwitch(NullLogger<BinanceKillSwitch>.Instance);
         var clock    = RiskTestFixtures.Clock();
+        var services = new ServiceCollection();
+        services.AddScoped<IRiskEventRepository>(_ => riskRepo);
+        var scopes = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
         var sut = new TradingBot.Risk.KillSwitch.KillSwitch(
-            riskRepo, binance, clock, NullLogger<TradingBot.Risk.KillSwitch.KillSwitch>.Instance);
+            scopes, binance, clock, NullLogger<TradingBot.Risk.KillSwitch.KillSwitch>.Instance);
         return (sut, riskRepo, binance);
     }
 }

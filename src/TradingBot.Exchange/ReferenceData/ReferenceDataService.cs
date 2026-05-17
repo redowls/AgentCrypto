@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TradingBot.Core.Domain;
 using TradingBot.Core.Domain.Enums;
@@ -10,19 +11,21 @@ namespace TradingBot.Exchange.ReferenceData;
 public sealed class ReferenceDataService : IReferenceDataService
 {
     private readonly IBinanceGatewayResolver _gateways;
-    private readonly ISymbolRepository _repo;
+    private readonly IServiceScopeFactory _scopes;
     private readonly SymbolFilters _filters;
     private readonly ILogger<ReferenceDataService> _log;
     private readonly ConcurrentDictionary<AccountType, DateTime> _lastRefresh = new();
 
+    // ReferenceDataService is a singleton; ISymbolRepository is scoped (DB-backed).
+    // Resolve it per refresh call to avoid capturing the scoped repo.
     public ReferenceDataService(
         IBinanceGatewayResolver gateways,
-        ISymbolRepository repo,
+        IServiceScopeFactory scopes,
         SymbolFilters filters,
         ILogger<ReferenceDataService> log)
     {
         _gateways = gateways;
-        _repo = repo;
+        _scopes = scopes;
         _filters = filters;
         _log = log;
     }
@@ -54,7 +57,9 @@ public sealed class ReferenceDataService : IReferenceDataService
             UpdatedAt   = info.FetchedAtUtc,
         }).ToList();
 
-        var counts = await _repo.UpsertExchangeCatalogAsync(exchangeName, rows, cancellationToken).ConfigureAwait(false);
+        await using var scope = _scopes.CreateAsyncScope();
+        var repo = scope.ServiceProvider.GetRequiredService<ISymbolRepository>();
+        var counts = await repo.UpsertExchangeCatalogAsync(exchangeName, rows, cancellationToken).ConfigureAwait(false);
 
         // After persistence, push the active set into the in-memory filter cache.
         var active = rows.Where(r => r.IsActive).ToList();
